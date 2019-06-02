@@ -21,6 +21,8 @@ with open('paperpile_tools/__init__.py') as fh:
 
 
 requirements = [
+	'bibtexparser~=1.1',
+	'click~=7.0',
 ]
 
 setup_requirements = ['pytest-runner']
@@ -41,6 +43,10 @@ setup(
 	setup_requires=setup_requirements,
 	tests_require=test_requirements,
 	include_package_data=True,
+	entry_points='''
+		[console_scripts]
+		pptools=paperpile_tools.cli:cli
+	''',
 	# license='',
 	# classifiers='',
 	# keywords=[],
