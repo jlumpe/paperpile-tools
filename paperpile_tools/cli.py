@@ -56,9 +56,9 @@ def print_autoassign_summary(updates, conflicts):
               help='Print auto-assignment summary')
 @click.option('-u', '--update', is_flag=True,
                  help='Update bibtex file in-place')
-@click.option('-m', '--merge', 'merge_into', type=click.File('w'),
+@click.option('-m', '--merge', 'merge_into', type=click.Path(exists=True, dir_okay=False, writable=True),
               help='Merge into existing bibtex file')
-@click.option('-w', '--write-keymap', type=click.Path(exists=True, dir_okay=False, writable=True),
+@click.option('-w', '--write-keymap', type=click.File('w'),
                  help='File to write updated keymap to')
 @click.argument('bibfile', type=click.Path(exists=True))
 def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_resolve,
