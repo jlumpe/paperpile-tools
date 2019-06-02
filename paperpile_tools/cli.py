@@ -92,12 +92,12 @@ def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_reso
 
 	# Read source bibliography
 	with open(bibfile) as f:
-		db = bib.read_bibliography(f)
+		db = bib.read_bibliography(f, check=True)
 
 	# Merging into existing?
 	if merge_into is not None:
 		with open(merge_into) as f:
-			target_db = bib.read_bibliography(f)
+			target_db = bib.read_bibliography(f, check=True)
 		keymap = bib.keymap_from_bibliography(target_db)
 		db = bib.merge_dbs(bib.revert_keys(target_db), db)
 

@@ -19,6 +19,11 @@ def check_entries(entries):
 		allkeys.add(entry['ID'])
 
 
+def check_db(db):
+	"""Check bibtex database for issues."""
+	check_entries(db.entries)
+
+
 def make_db(entries):
 	"""Make bibtex database from list of entry dictionaries."""
 	entries = list(entries)
@@ -84,12 +89,14 @@ def assign_reduced_keys(keys, keymap=None):
 	return updates, conflicts
 
 
-def read_bibliography(file):
+def read_bibliography(file, check=False):
 	"""Read .bib file.
 
 	Parameters
 	----------
 	file : str
+	check : bool
+		Check database for issues and raise exception if any are found.
 
 	Returns
 	-------
@@ -97,7 +104,10 @@ def read_bibliography(file):
 	"""
 	parser = BibTexParser(common_strings=True)
 	parser.customization = homogenize_latex_encoding
-	return load_bibtex(file, parser)
+	db = load_bibtex(file, parser)
+	if check:
+		check_db(db)
+	return db
 
 
 def make_key_sub_comment(keymap, omitted=None):
