@@ -4,7 +4,7 @@ import json
 import click
 
 from . import bibliography as bib
-from .util import find_pp_bibtex, Bijection, get_bijection
+from .util import find_pp_bibtex, Bijection, iter_letters
 
 
 
@@ -13,12 +13,38 @@ def cli():
 	pass
 
 
-def resolve_conflicts_interactively(keymap, updates, conflicts):
-	pass
+def dedup_key(key, existing, sep=''):
+	"""Deduplicate a key by adding a suffix to it."""
+	for suffix in iter_letters():
+		# Special case - consider the first "a" suffix to be equal to original key
+		if suffix == 'a' and key in existing:
+			continue
+		newkey  = key + sep + suffix
+		if newkey not in existing:
+			return newkey
 
 
-def resolve_conflicts_automatically(keymap, updates, conflicts):
-	pass
+def resolve_conflicts_interactively(keys, keymap, updates, conflicts):
+	raise NotImplementedError()
+
+	combined = {**dict(keymap), **dict(updates)}
+	assigned = {combined.get(key, key) for key in keys}
+
+	for desired in sorted(conflicts):
+		pass
+
+
+def resolve_conflicts_automatically(keys, keymap, updates, conflicts):
+	combined = {**dict(keymap), **dict(updates)}
+	assigned = {combined.get(key, key) for key in keys}
+
+	for desired in sorted(conflicts):
+		for oldkey in sorted(conflicts[desired]):
+			newkey = dedup_key(desired, assigned)
+			updates.ltr[oldkey] = newkey
+			assigned.add(newkey)
+
+		del conflicts[desired]
 
 
 def print_autoassign_summary(updates, conflicts):
@@ -113,8 +139,12 @@ def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_reso
 	if auto_assign:
 		updates, conflicts = bib.assign_reduced_keys(db.entries_dict, keymap=keymap)
 
-		if conflicts and interactive:
-			resolve_conflicts_interactively(keymap, updates, conflicts)
+		if conflicts:
+			keys = list(db.entries_dict)
+			if interactive:
+				resolve_conflicts_interactively(keys, keymap, updates, conflicts)
+			if auto_resolve:
+				resolve_conflicts_automatically(keys, keymap, updates, conflicts)
 
 		if summary:
 			print_autoassign_summary(updates, conflicts)

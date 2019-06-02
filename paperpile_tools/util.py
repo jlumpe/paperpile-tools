@@ -1,6 +1,8 @@
 from collections.abc import MutableMapping, Mapping, MutableSet
 import os
 from glob import glob
+import string
+import itertools
 
 
 class Bijection(MutableSet):
@@ -186,3 +188,13 @@ def find_pp_bibtex(directory):
 			mostrecent_time = ctime
 
 	return mostrecent
+
+
+def iter_letters():
+	"""Iterate over all non-empty strings of lower case letters, shortest first."""
+	i = 1
+	while True:
+		sets = [string.ascii_lowercase] * i
+		for letters in itertools.product(*sets):
+			yield ''.join(letters)
+		i += 1
