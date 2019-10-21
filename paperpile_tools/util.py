@@ -1,4 +1,4 @@
-from collections.abc import MutableMapping, Mapping, MutableSet
+from collections.abc import MutableMapping, MutableSet
 from enum import IntEnum
 import os
 from glob import glob
@@ -172,16 +172,23 @@ class Bijection(MutableSet):
 				self.ltr[left] = right
 
 	@staticmethod
-	def from_ltr(self, mapping):
+	def from_ltr(mapping):
 		"""Create new bijection from left-to-right mapping."""
 		b = Bijection()
 		b.ltr.update(mapping)
+		return b
 
 	@staticmethod
-	def from_rtl(self, mapping):
+	def from_rtl(mapping):
 		"""Create new bijection from right-to-left mapping."""
 		b = Bijection()
 		b.rtl.update(mapping)
+		return b
+
+	@staticmethod
+	def identity(keys):
+		"""Create an identity bijection that maps each key to itself."""
+		return Bijection((k, k) for k in keys)
 
 	def __len__(self):
 		return len(self.ltr)
@@ -222,7 +229,6 @@ class Bijection(MutableSet):
 		if not isinstance(other, Bijection):
 			other = Bijection.from_rtl(other)
 		try:
-
 			self._update(self.rtl, other.rtl)
 		except BijectionKeyConflict as e:
 			raise e.toabs(KeyLoc.RIGHT) from e
@@ -235,6 +241,34 @@ class Bijection(MutableSet):
 				continue
 
 		self_map.update(other_map)
+
+	def conflicts(self, other):
+		"""Find key conflicts with another bijection.
+
+		Parameters
+		----------
+		other : Bijection
+
+		Returns
+		-------
+		tuple
+		"""
+		ltr = {}
+		rtl = {}
+
+		for left in self.left & other.left:
+			v1 = self.ltr[left]
+			v2 = other.ltr[left]
+			if v1 != v2:
+				ltr[left] = v1, v2
+
+		for right in self.right & other.right:
+			v1 = self.rtl[right]
+			v2 = other.ltr[right]
+			if v1 != v2:
+				rtl[right] = v1, v2
+
+		return ltr, rtl
 
 
 def get_bijection(arg, dir='ltr'):
