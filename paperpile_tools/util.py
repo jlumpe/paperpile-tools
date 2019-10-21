@@ -1,8 +1,87 @@
 from collections.abc import MutableMapping, Mapping, MutableSet
+from enum import IntEnum
 import os
 from glob import glob
 import string
 import itertools
+
+
+class KeyLoc(IntEnum):
+	"""Location of a key in a Bijection key pair.
+
+	Either absolute (LEFT/RIGHT) or relative to one side
+	(FROM/TO).
+	"""
+
+	LEFT  = 0
+	RIGHT = 1
+	FROM  = 2
+	TO    = 3
+
+	@property
+	def relative(self):
+		return bool(self & 2)
+
+	@staticmethod
+	def _checkabs(side):
+		if not isinstance(side, KeyLoc):
+			raise TypeError(type(side))
+		if side.relative:
+			raise ValueError(side)
+
+	def toabs(self, fromside):
+		self._checkabs(fromside)
+		if not self.relative:
+			return self
+		return KeyLoc((self & 1) ^ fromside)
+
+	def torel(self, fromside):
+		self._checkabs(fromside)
+		if self.relative:
+			return self
+		return KeyLoc((self ^ fromside) | 2)
+
+	def flip(self):
+		return KeyLoc(self ^ 1)
+
+
+class BijectionKeyConflict(KeyError):
+	"""KeyError that occurs when adding/assigning to a :class:`.Bijection`.
+
+	Attributes
+	----------
+	keypair : tuple
+		The ``(left, right)`` (if adding to a Bijection) or
+		``(from, to)`` (if assigning to BijectionMap)
+		pair that caused the problem.
+	side : KeyLoc
+		Side of the key pair that the conflict occurred on.
+	current
+		Existing key value that caused the conflict.
+	"""
+
+	def __init__(self, keypair, side, current):
+		self.keypair = keypair
+		self.side = side
+		self.current = current
+
+	def toabs(self, fromside):
+		KeyLoc._checkabs(fromside)
+		if not self.side.relative:
+			return self
+
+		absside = self.side.toabs(fromside)
+		pair = self.keypair if fromside is KeyLoc.LEFT else self.keypair[::-1]
+		return BijectionKeyConflict(pair, absside, self.current)
+
+	def torel(self, fromside):
+		KeyLoc._checkabs(fromside)
+		if self.side.relative:
+			return self
+
+		relside = self.side.torel(fromside)
+		pair = self.keypair if fromside is KeyLoc.LEFT else self.keypair[::-1]
+		return BijectionKeyConflict(pair, relside, self.current)
 
 
 class Bijection(MutableSet):
@@ -23,8 +102,15 @@ class Bijection(MutableSet):
 	right
 		Collection of right keys (read-only).
 	"""
+
 	class BijectionMap(MutableMapping):
-		"""A mapping from one side of a bijection to the other."""
+		"""A mapping from one side of a :class:`.Bijection` to the other.
+
+		Properties
+		----------
+		other : .Bijection.Bijectionmap
+			The reverse mapping
+		"""
 		def __init__(self, other):
 			self.other = other
 			self.dict = {}
@@ -45,13 +131,13 @@ class Bijection(MutableSet):
 			if key in self.dict:
 				value2 = self.dict[key]
 				if value2 != value:
-					raise KeyError('Key %r already exists with different value %r' % (key, value2))
+					raise BijectionKeyConflict((key, value), KeyLoc.TO, value2)
 				return
 
 			if value in self.other.dict:
 				key2 = self.other.dict[value]
 				if key2 != key:
-					raise KeyError('Value %r already exists with key %r' % (value, key2))
+					raise BijectionKeyConflict((key, value), KeyLoc.FROM, key2)
 				return
 
 			self.dict[key] = value
@@ -75,6 +161,9 @@ class Bijection(MutableSet):
 		self.rtl = Bijection.BijectionMap(self.ltr)
 		self.ltr.other = self.rtl
 
+		self.left = self.ltr.keys()
+		self.right = self.rtl.keys()
+
 		if isinstance(pairs, Bijection):
 			self.ltr.update(pairs.ltr)
 
@@ -94,14 +183,6 @@ class Bijection(MutableSet):
 		b = Bijection()
 		b.rtl.update(mapping)
 
-	@property
-	def left(self):
-		return self.ltr.keys()
-
-	@property
-	def right(self):
-		return self.rtl.keys()
-
 	def __len__(self):
 		return len(self.ltr)
 
@@ -116,7 +197,10 @@ class Bijection(MutableSet):
 
 	def add(self, pair):
 		left, right = pair
-		self.ltr[left] = right
+		try:
+			self.ltr[left] = right
+		except BijectionKeyConflict as e:
+			raise e.toabs(KeyLoc.LEFT) from e
 
 	def discard(self, pair):
 		if pair not in self:
@@ -128,13 +212,20 @@ class Bijection(MutableSet):
 		"""Update with another bijection, merging keys on the left."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_ltr(other)
-		self._update(self.ltr, other.ltr)
+		try:
+			self._update(self.ltr, other.ltr)
+		except BijectionKeyConflict as e:
+			raise e.toabs(KeyLoc.LEFT) from e
 
 	def update_right(self, other):
 		"""Update with another bijection, merging keys on the right."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_rtl(other)
-		self._update(self.rtl, other.rtl)
+		try:
+
+			self._update(self.rtl, other.rtl)
+		except BijectionKeyConflict as e:
+			raise e.toabs(KeyLoc.RIGHT) from e
 
 	def _update(self, self_map, other_map):
 		for key in other_map:
