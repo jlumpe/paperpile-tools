@@ -4,6 +4,8 @@ import os
 from glob import glob
 import string
 import itertools
+from contextlib import contextmanager
+import re
 
 
 class KeyLoc(IntEnum):
@@ -323,3 +325,76 @@ def iter_letters():
 		for letters in itertools.product(*sets):
 			yield ''.join(letters)
 		i += 1
+
+
+def dedup_key(key, existing, sep=''):
+	"""Deduplicate a key by adding a suffix to it.
+
+	Parameters
+	----------
+	key : str
+		Key to make unique.
+	existing : collection of str
+		Existing keys to avoid conflicts with.
+	sep : str
+		Separator between ``key`` and suffix.
+
+	Returns
+	-------
+	str
+		``key`` with suffix added such that it does not match any keys in ``existing``.
+	"""
+	for suffix in iter_letters():
+		# Special case - consider the first "a" suffix to be equal to original key
+		if suffix == 'a' and key in existing:
+			continue
+		newkey  = key + sep + suffix
+		if newkey not in existing:
+			return newkey
+
+
+def str_replace_map(d, s, regex=False):
+	"""Replace multiple substrings at once using a mapping.
+
+	Parameters
+	----------
+	d : mapping
+		Mapping from substrings to replacements
+	s : str
+		String to replace within
+
+	Returns
+	-------
+	str
+		String with replacements made
+	"""
+	for (pattern, replacement) in d.items():
+		if regex:
+			s = re.sub(pattern, replacement, s)
+		else:
+			s = s.replace(pattern, replacement)
+	return s
+
+
+@contextmanager
+def _file_context_file(file):
+	yield file
+
+@contextmanager
+def _file_context_str(file, mode, **kw):
+	with open(file, mode=mode, **kw) as f:
+		yield f
+
+def file_context(file, mode='r', **kw):
+	"""
+
+	Parameters
+	----------
+	file : str or open file object
+
+	Returns
+	-------
+	Context manager which returns open file object on enter and exits on close
+	if needed.
+	"""
+	return _file_context_str(file, mode, **kw) if isinstance(file, str) else _file_context_file(file)

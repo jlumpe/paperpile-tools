@@ -4,24 +4,13 @@ import json
 import click
 
 from . import bibliography as bib
-from .util import find_pp_bibtex, Bijection, iter_letters
+from .util import find_pp_bibtex, Bijection, dedup_key
 
 
 
 @click.group()
 def cli():
 	pass
-
-
-def dedup_key(key, existing, sep=''):
-	"""Deduplicate a key by adding a suffix to it."""
-	for suffix in iter_letters():
-		# Special case - consider the first "a" suffix to be equal to original key
-		if suffix == 'a' and key in existing:
-			continue
-		newkey  = key + sep + suffix
-		if newkey not in existing:
-			return newkey
 
 
 def resolve_conflicts_interactively(keys, keymap, updates, conflicts):
