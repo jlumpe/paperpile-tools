@@ -286,7 +286,7 @@ def update_keys(db, keymap, save_attr=None):
 	Parameters
 	----------
 	db : BibDatabase
-	keymap : dict or paperpile_tools.util.Bijection
+	keymap : dict or Bijection
 	save_attr : str
 		Attribute name to store original key for each updated entry.
 
