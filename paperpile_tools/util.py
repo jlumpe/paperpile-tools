@@ -297,26 +297,6 @@ def get_bijection(arg, dir='ltr'):
 		raise ValueError("dir must be one of ['ltr', 'rtl']")
 
 
-def find_pp_bibtex_all(directory):
-	"""Find all Paperpile export files in directory by file name."""
-	pattern = os.path.join(directory, 'Paperpile - * BibTeX Export*.bib')
-	return [os.path.join(directory, f) for f in glob(pattern)]
-
-
-def find_pp_bibtex(directory):
-	"""Find most recent Paperpile export file in directory by name."""
-	mostrecent = None
-	mostrecent_time = 0
-
-	for file in find_pp_bibtex_all(directory):
-		ctime = os.stat(file).st_ctime
-		if ctime > mostrecent_time:
-			mostrecent = file
-			mostrecent_time = ctime
-
-	return mostrecent
-
-
 def iter_letters():
 	"""Iterate over all non-empty strings of lower case letters, shortest first."""
 	i = 1
