@@ -167,10 +167,8 @@ class Bijection(MutableSet[Tuple[L, R]]):
 		Parameters
 		----------
 		pairs
-			Existing ``Bijection`` instance or collection of ``(left, right)``
-			pairs.
+			Existing ``Bijection`` instance or collection of ``(left, right)`` pairs.
 		"""
-
 		self.ltr = BijectionMap(None)
 		self.rtl = BijectionMap(self.ltr)
 		self.ltr.other = self.rtl
@@ -230,7 +228,7 @@ class Bijection(MutableSet[Tuple[L, R]]):
 		del self.ltr[left]
 
 	def update_left(self, other: Union['Bijection', Mapping[L, R]]):
-		"""Update with another bijection, merging keys on the left."""
+		"""Update with another bijection, replacing keys on the left."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_ltr(other)
 		try:
@@ -239,7 +237,7 @@ class Bijection(MutableSet[Tuple[L, R]]):
 			raise e.toabs(KeyLoc.LEFT) from e
 
 	def update_right(self, other: Union['Bijection', Mapping[R, L]]):
-		"""Update with another bijection, merging keys on the right."""
+		"""Update with another bijection, replacing keys on the right."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_rtl(other)
 		try:

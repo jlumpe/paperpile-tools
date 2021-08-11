@@ -213,7 +213,7 @@ def extract_keymap(db: BibDatabase, attr: str) -> KeyMap:
 	Returns
 	-------
 	Bijection
-		Bijection between paperpile keys and replacement keys.
+		Bijection between Paperpile keys and replacement keys.
 
 	Raises
 	------
