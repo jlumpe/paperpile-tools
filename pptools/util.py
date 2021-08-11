@@ -86,6 +86,51 @@ class BijectionKeyConflict(KeyError):
 		return BijectionKeyConflict(pair, relside, self.current)
 
 
+class BijectionMap(MutableMapping):
+	"""A mapping from one side of a :class:`.Bijection` to the other.
+
+	Properties
+	----------
+	other : .Bijection.Bijectionmap
+		The reverse mapping
+	"""
+	def __init__(self, other):
+		self.other = other
+		self.dict = {}
+
+	def __len__(self):
+		return len(self.dict)
+
+	def __iter__(self):
+		return iter(self.dict)
+
+	def __contains__(self, value):
+		return value in self.dict
+
+	def __getitem__(self, key):
+		return self.dict[key]
+
+	def __setitem__(self, key, value):
+		if key in self.dict:
+			value2 = self.dict[key]
+			if value2 != value:
+				raise BijectionKeyConflict((key, value), KeyLoc.TO, value2)
+			return
+
+		if value in self.other.dict:
+			key2 = self.other.dict[value]
+			if key2 != key:
+				raise BijectionKeyConflict((key, value), KeyLoc.FROM, key2)
+			return
+
+		self.dict[key] = value
+		self.other.dict[value] = key
+
+	def __delitem__(self, key):
+		value = self.dict.pop(key)
+		del self.other.dict[value]
+
+
 class Bijection(MutableSet):
 	"""A bidirectional mapping.
 
@@ -95,61 +140,15 @@ class Bijection(MutableSet):
 
 	Properties
 	----------
-	ltr : .Bijection.BijectionMap
+	ltr : .BijectionMap
 		Mapping from left keys to right keys.
-	rtl : .Bijection.BijectionMap
+	rtl : .BijectionMap
 		Mapping from right keys to left keys.
 	left
 		Collection of left keys (read-only).
 	right
 		Collection of right keys (read-only).
 	"""
-
-	class BijectionMap(MutableMapping):
-		"""A mapping from one side of a :class:`.Bijection` to the other.
-
-		Properties
-		----------
-		other : .Bijection.Bijectionmap
-			The reverse mapping
-		"""
-		def __init__(self, other):
-			self.other = other
-			self.dict = {}
-
-		def __len__(self):
-			return len(self.dict)
-
-		def __iter__(self):
-			return iter(self.dict)
-
-		def __contains__(self, value):
-			return value in self.dict
-
-		def __getitem__(self, key):
-			return self.dict[key]
-
-		def __setitem__(self, key, value):
-			if key in self.dict:
-				value2 = self.dict[key]
-				if value2 != value:
-					raise BijectionKeyConflict((key, value), KeyLoc.TO, value2)
-				return
-
-			if value in self.other.dict:
-				key2 = self.other.dict[value]
-				if key2 != key:
-					raise BijectionKeyConflict((key, value), KeyLoc.FROM, key2)
-				return
-
-			self.dict[key] = value
-			self.other.dict[value] = key
-
-		def __delitem__(self, key):
-			value = self.dict.pop(key)
-			del self.other.dict[value]
-
-
 	def __init__(self, pairs=None):
 		"""
 		Parameters
@@ -159,8 +158,8 @@ class Bijection(MutableSet):
 			pairs.
 		"""
 
-		self.ltr = Bijection.BijectionMap(None)
-		self.rtl = Bijection.BijectionMap(self.ltr)
+		self.ltr = BijectionMap(None)
+		self.rtl = BijectionMap(self.ltr)
 		self.ltr.other = self.rtl
 
 		self.left = self.ltr.keys()
