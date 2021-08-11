@@ -59,26 +59,35 @@ def print_autoassign_summary(updates, conflicts):
 
 @cli.command()
 @click.option('-o', '--output', type=click.File('w'),
-                 help='Where to write modified bibtex file to')
+              help='Where to write modified bibtex file to')
 @click.option('-k', '--keymap', 'keymap_file', type=click.File('r'),
-                 help='Existing keymap file to use')
+              help='Existing keymap file to use')
 @click.option('-a', '--auto-assign', is_flag=True,
-                 help='Auto-assign keys')
+              help='Auto-assign keys')
 @click.option('-i', '--interactive', is_flag=True,
-                 help='Resolve auto-assignment conflicts interactively')
+              help='Resolve auto-assignment conflicts interactively')
 @click.option('-r', '--resolve-conflicts', 'auto_resolve', is_flag=True,
               help='Resolve auto-assignment conflicts automatically')
 @click.option('-s', '--summary', is_flag=True,
               help='Print auto-assignment summary')
 @click.option('-u', '--update', is_flag=True,
-                 help='Update bibtex file in-place')
+              help='Update bibtex file in-place')
 @click.option('-m', '--merge', 'merge_into', type=click.Path(exists=True, dir_okay=False, writable=True),
               help='Merge into existing bibtex file')
 @click.option('-w', '--write-keymap', type=click.File('w'),
-                 help='File to write updated keymap to')
+              help='File to write updated keymap to')
 @click.argument('bibfile', type=click.Path(exists=True))
-def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_resolve,
-               summary, update, merge_into, write_keymap):
+def assignkeys(bibfile,
+               output,
+               keymap_file,
+               auto_assign,
+               interactive,
+               auto_resolve,
+               summary,
+               update,
+               merge_into,
+               write_keymap,
+               ):
 	"""Update IDs/keys of entries in exported .bib file.
 
 	The IDs/keys of the entries are updated according to a keymap, which maps
