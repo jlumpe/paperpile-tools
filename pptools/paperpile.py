@@ -22,7 +22,7 @@ PP_ATTR = 'paperpile_key'
 KEY_NORM_MAP = {
 	r'\\_': '_',  # Escaped underscore?
 	r'\s+': ' ',  # Shorten whitespace
-	'{(\w+)}': '\\1',  # Weird brackets around words
+	r'{(\w+)}': '\\1',  # Weird brackets around words
 }
 
 
