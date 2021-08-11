@@ -1,15 +1,17 @@
 from typing import MutableMapping, MutableSet, Tuple, Any, Optional, Iterable, Mapping, Union, Dict,\
-	Collection, TypeVar
+	Collection, TypeVar, IO, ContextManager
 from enum import IntEnum
 import os
 import string
 import itertools
-from contextlib import contextmanager
+from contextlib import nullcontext
 import re
 
 
 L = TypeVar('L')
 R = TypeVar('R')
+
+FilePath = Union[str, os.PathLike]
 
 
 class KeyLoc(IntEnum):
@@ -357,25 +359,37 @@ def str_replace_map(d: Mapping[str, str], s: str, regex: bool = False) -> str:
 	return s
 
 
-@contextmanager
-def _file_context_file(file):
-	yield file
+def maybe_open(file_or_path: Union[FilePath, IO], mode: str = 'r', **open_kw) -> ContextManager[IO]:
+	"""Open a file given a file path as an argument, but pass existing file objects though.
 
-@contextmanager
-def _file_context_str(file, mode, **kw):
-	with open(file, mode=mode, **kw) as f:
-		yield f
-
-def file_context(file, mode='r', **kw):
-	"""
+	Intended to be used by API functions that take either type as an argument. If a file path is
+	passed the function will need to call ``open`` to get the file object to use, and will need to
+	close that object after it is done. If an existing file object is passed, it should be left to
+	the caller of the function to close it afterwards. This function returns a context manager which
+	performs the correct action for both opening and closing.
 
 	Parameters
 	----------
-	file : str or open file object
+	file_or_path
+		A path-like object or open file object.
+	mode
+		Mode to open file in.
+	\\**open_kw
+		Keyword arguments to :func:`open`.
 
 	Returns
 	-------
-	Context manager which returns open file object on enter and exits on close
-	if needed.
+	ContextManager[IO]
+		Context manager which gives an open file object on enter and closes it on exit only if it
+		was opened by this function.
 	"""
-	return _file_context_str(file, mode, **kw) if isinstance(file, str) else _file_context_file(file)
+	try:
+		# Try to interpret as path
+		path = os.fspath(file_or_path)
+	except TypeError:
+		# Not a path, assume file object
+		# Return context manager which gives this object on enter and does not close on exit
+		return nullcontext(file_or_path)
+	else:
+		# Is a path, just open
+		return open(path, mode, **open_kw)

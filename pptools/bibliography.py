@@ -9,7 +9,7 @@ from bibtexparser.customization import homogenize_latex_encoding
 from bibtexparser.bibdatabase import BibDatabase
 from bibtexparser.bwriter import BibTexWriter
 
-from .util import Bijection, get_bijection, file_context
+from .util import Bijection, get_bijection, maybe_open, FilePath
 
 
 __all__ = ['check_db', 'check_entries', 'make_db', 'merge_dbs',
@@ -82,7 +82,7 @@ def default_parser() -> BibTexParser:
 	return parser
 
 
-def read_bibliography(file, check: bool = False) -> BibDatabase:
+def read_bibliography(file: Union[FilePath, TextIO], check: bool = False) -> BibDatabase:
 	"""Read .bib file.
 
 	Parameters
@@ -93,7 +93,7 @@ def read_bibliography(file, check: bool = False) -> BibDatabase:
 	"""
 	parser = default_parser()
 
-	with file_context(file, encoding='utf-8') as f:
+	with maybe_open(file, encoding='utf-8') as f:
 		db = load_bibtex(f, parser)
 
 	if check:
@@ -323,16 +323,10 @@ def revert_keys(db: BibDatabase, attr: str, inplace: bool = False):
 	return make_db(entries) if inplace else db
 
 
-def write_bibliography(file, db: BibDatabase):
-	"""Write bibliography entries to new file.
-
-	Parameters
-	----------
-	file : str or writable file object
-	db :
-	"""
+def write_bibliography(file: Union[FilePath, TextIO], db: BibDatabase):
+	"""Write bibliography entries to new file."""
 	writer = BibTexWriter()
 	writer.indent = '    '
 
-	with file_context(file, 'w', encoding='utf-8') as f:
+	with maybe_open(file, 'w', encoding='utf-8') as f:
 		f.write(writer.write(db))
