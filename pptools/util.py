@@ -2,7 +2,6 @@ from typing import MutableMapping, MutableSet, Tuple, Any, Optional, Iterable, M
 	Collection, TypeVar
 from enum import IntEnum
 import os
-from glob import glob
 import string
 import itertools
 from contextlib import contextmanager

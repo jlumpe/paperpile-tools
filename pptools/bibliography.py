@@ -9,7 +9,7 @@ from bibtexparser.customization import homogenize_latex_encoding
 from bibtexparser.bibdatabase import BibDatabase
 from bibtexparser.bwriter import BibTexWriter
 
-from .util import Bijection, get_bijection, BijectionKeyConflict, KeyLoc, file_context
+from .util import Bijection, get_bijection, file_context
 
 
 __all__ = ['check_db', 'check_entries', 'make_db', 'merge_dbs',

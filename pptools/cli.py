@@ -4,8 +4,8 @@ import json
 import click
 
 from . import bibliography as bib
-from .util import find_pp_bibtex, Bijection, dedup_key
-
+from .util import Bijection, dedup_key
+from .paperpile import find_pp_bib
 
 
 @click.group()
@@ -100,7 +100,7 @@ def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_reso
 	# Locate most recent if given directory
 	if os.path.isdir(bibfile):
 		directory = bibfile
-		bibfile = find_pp_bibtex(directory)
+		bibfile = find_pp_bib(directory)
 		if bibfile is None:
 			raise click.ClickException('No Paperpile bibtex files found in %s' % directory)
 		click.echo('Using most recent Paperpile export in directory: %s' % bibfile, err=True)
