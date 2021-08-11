@@ -1,6 +1,6 @@
 import pytest
 
-from pptools.util import Bijection, KeyLoc, BijectionKeyConflict
+from pptools.util.bijection import Bijection, KeyLoc, BijectionKeyConflict
 
 
 def test_KeyLoc():
