@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import json
 
@@ -98,7 +99,8 @@ def assignkeys(bibfile, output, keymap_file, auto_assign, interactive, auto_reso
 		raise click.ClickException('The --interactive and --resolve-conflicts options are mutually exlusive')
 
 	# Locate most recent if given directory
-	if os.path.isdir(bibfile):
+	bibfile = Path(bibfile)
+	if bibfile.is_dir():
 		directory = bibfile
 		bibfile = find_pp_bib(directory)
 		if bibfile is None:

@@ -1,12 +1,12 @@
 """PaperPile-specific code."""
 
 import re
-import os
-from glob import glob
+from pathlib import Path
+from typing import List
 
 from bibtexparser.bibdatabase import BibDatabase
 
-from .util import BijectionKeyConflict, KeyLoc, str_replace_map
+from .util import BijectionKeyConflict, KeyLoc, str_replace_map, FilePath
 from .bibliography import extract_keymap, KeyMap
 
 
@@ -58,13 +58,12 @@ def extract_pp_keymap(db: BibDatabase) -> KeyMap:
 			assert 0
 
 
-def find_pp_bib_all(directory):
+def find_pp_bib_all(directory: FilePath) -> List[Path]:
 	"""Find all Paperpile export files in directory by file name."""
-	pattern = os.path.join(directory, 'Paperpile - * BibTeX Export*.bib')
-	return [os.path.join(directory, f) for f in glob(pattern)]
+	return list(Path(directory).glob('Paperpile - * BibTeX Export*.bib'))
 
 
-def find_pp_bib(directory):
+def find_pp_bib(directory: FilePath) -> Path:
 	"""Find most recent PaperPile export file in directory by name.
 
 	Note - this works of the creation time in the file's metadata, not by parsing
@@ -74,7 +73,7 @@ def find_pp_bib(directory):
 	mostrecent_time = 0
 
 	for file in find_pp_bib_all(directory):
-		ctime = os.stat(file).st_ctime
+		ctime = file.stat().st_ctime
 		if ctime > mostrecent_time:
 			mostrecent = file
 			mostrecent_time = ctime
