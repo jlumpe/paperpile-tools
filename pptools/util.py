@@ -1,4 +1,5 @@
-from collections.abc import MutableMapping, MutableSet
+from typing import MutableMapping, MutableSet, Tuple, Any, Optional, Iterable, Mapping, Union, Dict,\
+	Collection, TypeVar
 from enum import IntEnum
 import os
 from glob import glob
@@ -6,6 +7,10 @@ import string
 import itertools
 from contextlib import contextmanager
 import re
+
+
+L = TypeVar('L')
+R = TypeVar('R')
 
 
 class KeyLoc(IntEnum):
@@ -21,7 +26,7 @@ class KeyLoc(IntEnum):
 	TO    = 3
 
 	@property
-	def relative(self):
+	def relative(self) -> bool:
 		return bool(self & 2)
 
 	@staticmethod
@@ -61,13 +66,16 @@ class BijectionKeyConflict(KeyError):
 	current
 		Existing key value that caused the conflict.
 	"""
+	keypair: Tuple[Any, Any]
+	side: KeyLoc
+	current: Any
 
-	def __init__(self, keypair, side, current):
+	def __init__(self, keypair: Tuple[Any, Any], side: KeyLoc, current: Any):
 		self.keypair = keypair
 		self.side = side
 		self.current = current
 
-	def toabs(self, fromside):
+	def toabs(self, fromside: KeyLoc) -> 'BijectionKeyConflict':
 		KeyLoc._checkabs(fromside)
 		if not self.side.relative:
 			return self
@@ -76,7 +84,7 @@ class BijectionKeyConflict(KeyError):
 		pair = self.keypair if fromside is KeyLoc.LEFT else self.keypair[::-1]
 		return BijectionKeyConflict(pair, absside, self.current)
 
-	def torel(self, fromside):
+	def torel(self, fromside: KeyLoc) -> 'BijectionKeyConflict':
 		KeyLoc._checkabs(fromside)
 		if self.side.relative:
 			return self
@@ -86,14 +94,17 @@ class BijectionKeyConflict(KeyError):
 		return BijectionKeyConflict(pair, relside, self.current)
 
 
-class BijectionMap(MutableMapping):
+class BijectionMap(MutableMapping[L, R]):
 	"""A mapping from one side of a :class:`.Bijection` to the other.
 
 	Properties
 	----------
-	other : .Bijection.Bijectionmap
+	other
 		The reverse mapping
 	"""
+	other: 'BijectionMap[R, L]'
+	dict: Dict[L, R]
+
 	def __init__(self, other):
 		self.other = other
 		self.dict = {}
@@ -131,7 +142,7 @@ class BijectionMap(MutableMapping):
 		del self.other.dict[value]
 
 
-class Bijection(MutableSet):
+class Bijection(MutableSet[Tuple[L, R]]):
 	"""A bidirectional mapping.
 
 	A bijection between the sets :attr:`left` and :attr:`right`. The bijection
@@ -140,16 +151,19 @@ class Bijection(MutableSet):
 
 	Properties
 	----------
-	ltr : .BijectionMap
+	ltr
 		Mapping from left keys to right keys.
-	rtl : .BijectionMap
+	rtl
 		Mapping from right keys to left keys.
 	left
 		Collection of left keys (read-only).
 	right
 		Collection of right keys (read-only).
 	"""
-	def __init__(self, pairs=None):
+	ltr: BijectionMap[L, R]
+	rtl: BijectionMap[R, L]
+
+	def __init__(self, pairs: Optional[Iterable[Tuple[L, R]]]=None):
 		"""
 		Parameters
 		----------
@@ -173,21 +187,21 @@ class Bijection(MutableSet):
 				self.ltr[left] = right
 
 	@staticmethod
-	def from_ltr(mapping):
+	def from_ltr(mapping: Mapping[L, R]) -> 'Bijection[L, R]':
 		"""Create new bijection from left-to-right mapping."""
 		b = Bijection()
 		b.ltr.update(mapping)
 		return b
 
 	@staticmethod
-	def from_rtl(mapping):
+	def from_rtl(mapping: Mapping[R, L]) -> 'Bijection[L, R]':
 		"""Create new bijection from right-to-left mapping."""
 		b = Bijection()
 		b.rtl.update(mapping)
 		return b
 
 	@staticmethod
-	def identity(keys):
+	def identity(keys: Iterable[L]) -> 'Bijection[L, L]':
 		"""Create an identity bijection that maps each key to itself."""
 		return Bijection((k, k) for k in keys)
 
@@ -203,20 +217,20 @@ class Bijection(MutableSet):
 		left, right = pair
 		return left in self.ltr and self.ltr[left] == right
 
-	def add(self, pair):
+	def add(self, pair: Tuple[L, R]):
 		left, right = pair
 		try:
 			self.ltr[left] = right
 		except BijectionKeyConflict as e:
 			raise e.toabs(KeyLoc.LEFT) from e
 
-	def discard(self, pair):
+	def discard(self, pair: Tuple[L, R]):
 		if pair not in self:
 			raise KeyError(pair)
 		left, right = pair
 		del self.ltr[left]
 
-	def update_left(self, other):
+	def update_left(self, other: Union['Bijection', Mapping[L, R]]):
 		"""Update with another bijection, merging keys on the left."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_ltr(other)
@@ -225,7 +239,7 @@ class Bijection(MutableSet):
 		except BijectionKeyConflict as e:
 			raise e.toabs(KeyLoc.LEFT) from e
 
-	def update_right(self, other):
+	def update_right(self, other: Union['Bijection', Mapping[R, L]]):
 		"""Update with another bijection, merging keys on the right."""
 		if not isinstance(other, Bijection):
 			other = Bijection.from_rtl(other)
@@ -243,17 +257,8 @@ class Bijection(MutableSet):
 
 		self_map.update(other_map)
 
-	def conflicts(self, other):
-		"""Find key conflicts with another bijection.
-
-		Parameters
-		----------
-		other : Bijection
-
-		Returns
-		-------
-		tuple
-		"""
+	def conflicts(self, other: 'Bijection') -> Tuple[Dict, Dict]:
+		"""Find key conflicts with another bijection."""
 		ltr = {}
 		rtl = {}
 
@@ -272,7 +277,7 @@ class Bijection(MutableSet):
 		return ltr, rtl
 
 
-def get_bijection(arg, dir='ltr'):
+def get_bijection(arg: Union[Bijection, Mapping], dir: str = 'ltr') -> Bijection:
 	"""Get Bijection from argument, accepting mappings.
 
 	Parameters
@@ -296,7 +301,7 @@ def get_bijection(arg, dir='ltr'):
 		raise ValueError("dir must be one of ['ltr', 'rtl']")
 
 
-def iter_letters():
+def iter_letters() -> Iterable[str]:
 	"""Iterate over all non-empty strings of lower case letters, shortest first."""
 	i = 1
 	while True:
@@ -306,14 +311,14 @@ def iter_letters():
 		i += 1
 
 
-def dedup_key(key, existing, sep=''):
+def dedup_key(key: str, existing: Collection[str], sep: str = '') -> str:
 	"""Deduplicate a key by adding a suffix to it.
 
 	Parameters
 	----------
-	key : str
+	key
 		Key to make unique.
-	existing : collection of str
+	existing
 		Existing keys to avoid conflicts with.
 	sep : str
 		Separator between ``key`` and suffix.
@@ -332,7 +337,7 @@ def dedup_key(key, existing, sep=''):
 			return newkey
 
 
-def str_replace_map(d, s, regex=False):
+def str_replace_map(d: Mapping[str, str], s: str, regex: bool = False) -> str:
 	"""Replace multiple substrings at once using a mapping.
 
 	Parameters

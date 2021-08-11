@@ -1,5 +1,8 @@
 """General Bibtex stuff."""
 
+from typing import Union, Optional, Mapping, Iterable, Collection, Callable, TextIO, Dict, Any, List,\
+	Tuple
+
 from bibtexparser import load as load_bibtex
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.customization import homogenize_latex_encoding
@@ -15,7 +18,13 @@ __all__ = ['check_db', 'check_entries', 'make_db', 'merge_dbs',
            'find_duplicate_keys']
 
 
-def check_entries(entries):
+# Type aliases
+KeyMap = Bijection[str, str]
+KeyMapArg = Union[KeyMap, Mapping[str, str]]
+BibEntry = Dict[str, Any]
+
+
+def check_entries(entries: Iterable[BibEntry]):
 	"""Validate list of entries."""
 	# Just check for duplicate keys
 	allkeys = set()
@@ -25,7 +34,7 @@ def check_entries(entries):
 		allkeys.add(entry['ID'])
 
 
-def check_db(db):
+def check_db(db: BibDatabase) -> None:
 	"""Check bibtex database for issues.
 
 	Parameters
@@ -40,7 +49,7 @@ def check_db(db):
 	check_entries(db.entries)
 
 
-def make_db(entries):
+def make_db(entries: Iterable[BibEntry]) -> BibDatabase:
 	"""Make bibtex database from list of entry dictionaries.
 
 	Parameters
@@ -58,36 +67,22 @@ def make_db(entries):
 	return db
 
 
-def merge_dbs(*dbs):
-	"""Merge databases together.
-
-	Parameters
-	----------
-	dbs : BibDatabase
-
-	Returns
-	-------
-	BibDatabase
-	"""
+def merge_dbs(*dbs: BibDatabase) -> BibDatabase:
+	"""Merge databases together."""
 	entries_dict = {}
 	for db in dbs:
 		entries_dict.update(db.entries_dict)
 	return make_db(entries_dict.values())
 
 
-def default_parser():
-	"""Get a Bibtex parser with default settings.
-
-	Returns
-	-------
-	BibTexParser
-	"""
+def default_parser() -> BibTexParser:
+	"""Get a Bibtex parser with default settings."""
 	parser = BibTexParser(common_strings=True)
 	# parser.customization = homogenize_latex_encoding
 	return parser
 
 
-def read_bibliography(file, check=False):
+def read_bibliography(file, check: bool = False) -> BibDatabase:
 	"""Read .bib file.
 
 	Parameters
@@ -95,10 +90,6 @@ def read_bibliography(file, check=False):
 	file : str or open file object
 	check : bool
 		Check database for issues and raise exception if any are found.
-
-	Returns
-	-------
-	BibDatabase
 	"""
 	parser = default_parser()
 
@@ -111,7 +102,7 @@ def read_bibliography(file, check=False):
 	return db
 
 
-def make_key_sub_comment(keymap, omitted=None):
+def make_key_sub_comment(keymap: KeyMapArg, omitted: Collection[str] = None) -> str:
 	"""Make a comment for a bibliography file indicating key substitutions.
 
 	Parameters
@@ -119,10 +110,6 @@ def make_key_sub_comment(keymap, omitted=None):
 	keymap : dict or Bijection
 	omitted : list
 		List of omitted keys (not present in new bibliography)
-
-	Returns
-	-------
-	str
 	"""
 	keymap = dict(keymap)
 	lines = [
@@ -141,7 +128,7 @@ def make_key_sub_comment(keymap, omitted=None):
 	return '\n'.join(lines) + '\n'
 
 
-def find_duplicate_keys(db, attr=None, f=None):
+def find_duplicate_keys(db: BibDatabase, attr: Optional[str] = None, f: Optional[Callable] = None) -> Dict[str, List]:
 	"""Find duplicate keys.
 
 	Parameters
@@ -176,16 +163,18 @@ def find_duplicate_keys(db, attr=None, f=None):
 	return {k: v for k, v in seen.items() if len(v) > 1}
 
 
-def entry_diff(e1, e2, f=None):
+def entry_diff(e1: BibEntry, e2: BibEntry, f: Optional[Callable] = None) -> Dict[str, Tuple[Any, Any]]:
 	"""Find the attribute values for which two entries differ.
 
 	This is mostly intended to be used in resolving duplicates.
 
 	Parameters
 	----------
-	e1 : dict
-	e2 : dict
-	f : callable
+	e1
+		First entry.
+	e2
+		Second entry.
+	f
 		Function with signature ``(entry, attrname, value)`` which normalizes
 		the values for comparison.
 
@@ -212,13 +201,13 @@ def entry_diff(e1, e2, f=None):
 	return diff
 
 
-def extract_keymap(db, attr):
+def extract_keymap(db: BibDatabase, attr: str) -> KeyMap:
 	"""Extract key map from existing bibliography.
 
 	Parameters
 	----------
-	db : bibtexparser.bibdatabase.BibDatabase
-	attr : str
+	db
+	attr
 		Attribute name to get original key from
 
 	Returns
@@ -243,12 +232,12 @@ def extract_keymap(db, attr):
 	return keymap
 
 
-def make_keymap(keys, f):
+def make_keymap(keys: Iterable[str], f: Callable) -> Tuple[KeyMap, Dict[str, List[str]]]:
 	"""Create keymap according to function, detecting and omitting duplicate assignments.
 
 	Parameters
 	----------
-	keys : iterable of str
+	keys
 		List of existing keys.
 	f : callable
 		Function which takes an existing key and returns the updated key.
@@ -280,19 +269,15 @@ def make_keymap(keys, f):
 	return updates, conflicts
 
 
-def update_keys(db, keymap, save_attr=None):
+def update_keys(db: BibDatabase, keymap: KeyMapArg, save_attr: Optional[str] = None) -> BibDatabase:
 	"""Replace keys in bibtex database using keymap.
 
 	Parameters
 	----------
-	db : BibDatabase
+	db
 	keymap : dict or Bijection
-	save_attr : str
+	save_attr
 		Attribute name to store original key for each updated entry.
-
-	Returns
-	-------
-	BibDatabase
 	"""
 	keymap = get_bijection(keymap)
 
@@ -314,20 +299,16 @@ def update_keys(db, keymap, save_attr=None):
 	return make_db(entries)
 
 
-def revert_keys(db, attr, inplace=False):
+def revert_keys(db: BibDatabase, attr: str, inplace: bool = False):
 	"""Revert keys in database to their original values.
 
 	Parameters
 	----------
-	db : BibDatabase
-	attr : str
+	db
+	attr
 		Attribute name containing the original key values.
-	inplace : bool
+	inplace
 		Update bibliography in place instead of returning a new one.
-
-	Returns
-	-------
-    db : BibDatabase
 	"""
 	entries = db.entries
 	if not inplace:
@@ -342,7 +323,7 @@ def revert_keys(db, attr, inplace=False):
 	return make_db(entries) if inplace else db
 
 
-def write_bibliography(file, db):
+def write_bibliography(file, db: BibDatabase):
 	"""Write bibliography entries to new file.
 
 	Parameters

@@ -4,8 +4,10 @@ import re
 import os
 from glob import glob
 
+from bibtexparser.bibdatabase import BibDatabase
+
 from .util import BijectionKeyConflict, KeyLoc, str_replace_map
-from .bibliography import extract_keymap
+from .bibliography import extract_keymap, KeyMap
 
 
 __all__ = ['PP_ATTR', 'remove_pp_suffix', 'extract_pp_keymap', 'find_pp_bib_all',
@@ -24,37 +26,19 @@ KEY_NORM_MAP = {
 }
 
 
-def normalize_pp_key(key):
-	"""Normalize a paperpile key.
-
-	Parameters
-	----------
-	key : str
-
-	Returns
-	-------
-	str
-	"""
+def normalize_pp_key(key: str) -> str:
+	"""Normalize a paperpile key."""
 	return str_replace_map(KEY_NORM_MAP, key, regex=True)
 
 
-def remove_pp_suffix(key):
-	"""Remove extra characters Paperpile appends to a Bibtex key.
-
-	Parameters
-	----------
-	key : str
-
-	Returns
-	-------
-	str
-	"""
+def remove_pp_suffix(key: str) -> str:
+	"""Remove extra characters Paperpile appends to a Bibtex key."""
 	if re.fullmatch(r'.*?-[A-Za-z]{2}$', key):
 		return key[:-3]
 	return key
 
 
-def extract_pp_keymap(db):
+def extract_pp_keymap(db: BibDatabase) -> KeyMap:
 	try:
 		return extract_keymap(db, PP_ATTR)
 
